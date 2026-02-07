@@ -24,22 +24,30 @@ export default function RumorStats({
   consensus,
   compact = false,
 }: RumorStatsProps) {
-  const truePercent = totalVotes > 0 ? (trueVotes / totalVotes) * 100 : 50;
-  const falsePercent = 100 - truePercent;
+  // Ensure all values are valid numbers
+  const safeTrueVotes = Number.isFinite(trueVotes) ? trueVotes : 0;
+  const safeFalseVotes = Number.isFinite(falseVotes) ? falseVotes : 0;
+  const safeTotalVotes = Number.isFinite(totalVotes) ? totalVotes : 0;
+  const safeAvgCredits = Number.isFinite(avgCreditsSpent) ? avgCreditsSpent : 0;
+  
+  // Calculate percentages safely
+  const total = safeTrueVotes + safeFalseVotes || safeTotalVotes || 1;
+  const truePercent = (safeTrueVotes / total) * 100;
+  const falsePercent = (safeFalseVotes / total) * 100;
 
   if (compact) {
     return (
       <div className="flex items-center gap-4 text-sm">
         <div className="flex items-center gap-1">
           <span className="text-emerald-500">✓</span>
-          <span>{trueVotes}</span>
+          <span>{safeTrueVotes}</span>
         </div>
         <div className="flex items-center gap-1">
           <span className="text-red-500">✗</span>
-          <span>{falseVotes}</span>
+          <span>{safeFalseVotes}</span>
         </div>
         <span className="text-slate-400">|</span>
-        <span className="text-slate-500">{totalVotes} votes</span>
+        <span className="text-slate-500">{safeTotalVotes} votes</span>
       </div>
     );
   }
@@ -50,10 +58,10 @@ export default function RumorStats({
       <div>
         <div className="flex justify-between text-sm mb-1">
           <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-            True ({trueVotes})
+            True ({safeTrueVotes})
           </span>
           <span className="text-red-600 dark:text-red-400 font-medium">
-            False ({falseVotes})
+            False ({safeFalseVotes})
           </span>
         </div>
         
@@ -78,14 +86,14 @@ export default function RumorStats({
       <div className="grid grid-cols-3 gap-4 text-center">
         <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
           <div className="text-2xl font-bold text-slate-900 dark:text-white">
-            {totalVotes}
+            {safeTotalVotes}
           </div>
           <div className="text-xs text-slate-500">Total Votes</div>
         </div>
         
         <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
           <div className="text-2xl font-bold text-slate-900 dark:text-white">
-            {avgCreditsSpent?.toFixed(1) || '—'}
+            {Number.isFinite(safeAvgCredits) ? safeAvgCredits.toFixed(1) : '—'}
           </div>
           <div className="text-xs text-slate-500">Avg Credits</div>
         </div>

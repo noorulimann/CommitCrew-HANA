@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  StateCommitmentService,
-  triggerStateCommitmentNow,
-} from '@/services/integrity';
+import { StateCommitmentService, triggerStateCommitmentNow } from '@/services/integrity';
 
 /**
  * POST /api/integrity/trigger-commitment
@@ -17,14 +14,13 @@ export async function POST(request: NextRequest) {
     //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     // }
 
-    const commitment = await triggerStateCommitmentNow();
+    const commitment = await StateCommitmentService.createHourlyCommitment();
 
     if (commitment) {
       return NextResponse.json(
         {
-          status: 'success',
-          message: 'State commitment triggered successfully',
-          commitment: {
+          success: true,
+          data: {
             id: commitment._id,
             timestamp: commitment.timestamp,
             hourKey: commitment.hourKey,
@@ -32,14 +28,15 @@ export async function POST(request: NextRequest) {
             rumorCount: commitment.rumorCount,
             verified: commitment.verified,
           },
+          message: 'State commitment triggered successfully',
         },
         { status: 200 }
       );
     } else {
       return NextResponse.json(
         {
-          status: 'failed',
-          message: 'Failed to create state commitment',
+          success: false,
+          error: 'Failed to create state commitment',
         },
         { status: 500 }
       );
@@ -48,6 +45,7 @@ export async function POST(request: NextRequest) {
     console.error('Error triggering commitment:', error);
     return NextResponse.json(
       {
+        success: false,
         error: 'Failed to trigger state commitment',
         details: error instanceof Error ? error.message : 'Unknown error',
       },

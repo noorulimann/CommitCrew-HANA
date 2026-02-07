@@ -115,6 +115,8 @@ export async function POST(request: NextRequest) {
         rumor: {
           newTruthScore: updatedRumor?.truthScore || 0,
           newTotalVotes: updatedRumor?.totalVotes || 0,
+          trueVotes: updatedRumor?.trueVotes || 0,
+          falseVotes: updatedRumor?.falseVotes || 0,
         },
       },
       'Vote cast successfully'

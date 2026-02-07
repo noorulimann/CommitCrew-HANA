@@ -126,6 +126,7 @@ VoteSchema.pre('save', async function(next) {
 /**
  * Update Rumor Score AFTER vote is saved
  * Uses aggregate truth score calculation from scoring services
+ * Also tracks true/false vote counts
  */
 VoteSchema.post('save', async function(doc) {
   const { calculateAggregateTruthScore } = await import('@/services/scoring');
@@ -138,6 +139,10 @@ VoteSchema.post('save', async function(doc) {
     .select('voteValue finalTrustScore')
     .lean();
 
+  // Count true and false votes
+  const trueVotes = votes.filter(v => v.voteValue === true).length;
+  const falseVotes = votes.filter(v => v.voteValue === false).length;
+
   // Calculate aggregate truth score using scoring service
   const truthScore = calculateAggregateTruthScore(
     votes.map(v => ({
@@ -146,17 +151,20 @@ VoteSchema.post('save', async function(doc) {
     }))
   );
 
-  // Update rumor with new score
-  await Rumor.findByIdAndUpdate(doc.rumorId, {
+  // Update rumor with new score and vote counts
+  const result = await Rumor.findByIdAndUpdate(doc.rumorId, {
     truthScore,
     totalVotes: votes.length,
+    trueVotes,
+    falseVotes,
     updatedAt: new Date(),
-  });
+  }, { new: true });
 });
 
 /**
  * Update Rumor Score AFTER vote is deleted
  * Recalculates aggregate score without the deleted vote
+ * Also updates true/false vote counts
  */
 VoteSchema.post('findOneAndDelete', async function(doc) {
   if (!doc) return;
@@ -170,6 +178,10 @@ VoteSchema.post('findOneAndDelete', async function(doc) {
     .select('voteValue finalTrustScore')
     .lean();
 
+  // Count true and false votes
+  const trueVotes = votes.filter(v => v.voteValue === true).length;
+  const falseVotes = votes.filter(v => v.voteValue === false).length;
+
   const truthScore = calculateAggregateTruthScore(
     votes.map(v => ({
       voteValue: v.voteValue as boolean,
@@ -180,6 +192,8 @@ VoteSchema.post('findOneAndDelete', async function(doc) {
   await Rumor.findByIdAndUpdate(doc.rumorId, {
     truthScore,
     totalVotes: votes.length,
+    trueVotes,
+    falseVotes,
     updatedAt: new Date(),
   });
 });

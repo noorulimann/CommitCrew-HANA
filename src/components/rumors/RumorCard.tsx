@@ -97,21 +97,12 @@ export default function RumorCard({
       </div>
 
       {/* Stats */}
-      {showFullStats && rumor.trueVotes !== undefined ? (
-        <RumorStats
-          trueVotes={rumor.trueVotes}
-          falseVotes={rumor.falseVotes || 0}
-          totalVotes={rumor.totalVotes}
-          compact={false}
-        />
-      ) : (
-        <RumorStats
-          trueVotes={Math.round(rumor.totalVotes * 0.5)}
-          falseVotes={Math.round(rumor.totalVotes * 0.5)}
-          totalVotes={rumor.totalVotes}
-          compact={true}
-        />
-      )}
+      <RumorStats
+        trueVotes={rumor.trueVotes ?? 0}
+        falseVotes={rumor.falseVotes ?? 0}
+        totalVotes={rumor.totalVotes}
+        compact={true}
+      />
 
       {/* Footer */}
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">

@@ -9,7 +9,7 @@
 
 import { NextRequest } from 'next/server';
 import connectDB from '@/lib/mongodb';
-import { Rumor, User } from '@/database/schemas';
+import { Rumor, User, Vote } from '@/database/schemas';
 import { 
   errorResponse, 
   successResponse, 
@@ -54,6 +54,8 @@ export async function POST(request: NextRequest) {
       submitterNullifier,
       truthScore: 0,
       totalVotes: 0,
+      trueVotes: 0,
+      falseVotes: 0,
       status: 'active',
     });
     
@@ -109,23 +111,37 @@ export async function GET(request: NextRequest) {
       Rumor.countDocuments(query),
     ]);
     
-    // Calculate age and rank score for each rumor
-    const rankedRumors = rumors.map(rumor => {
+    // Prepare response with vote count fallback
+    const rankedRumors = [];
+    for (const rumor of rumors) {
       const ageHours = (Date.now() - new Date(rumor.createdAt).getTime()) / (1000 * 60 * 60);
       const rankScore = rumor.truthScore / (1 + Math.pow(ageHours, 1.5));
       
-      return {
+      // Fallback: if trueVotes and falseVotes are not set but totalVotes > 0, recalculate
+      let trueVotes = rumor.trueVotes || 0;
+      let falseVotes = rumor.falseVotes || 0;
+      
+      if ((trueVotes === 0 && falseVotes === 0 && rumor.totalVotes > 0)) {
+        // Recalculate from actual votes
+        const rumorsVotes = await Vote.find({ rumorId: rumor._id }).select('voteValue').lean();
+        trueVotes = rumorsVotes.filter((v: any) => v.voteValue === true).length;
+        falseVotes = rumorsVotes.filter((v: any) => v.voteValue === false).length;
+      }
+      
+      rankedRumors.push({
         _id: rumor._id.toString(),
         content: rumor.content,
         truthScore: rumor.truthScore,
         totalVotes: rumor.totalVotes,
+        trueVotes,
+        falseVotes,
         status: rumor.status,
         createdAt: rumor.createdAt,
         updatedAt: rumor.updatedAt,
         ageHours: Math.round(ageHours * 10) / 10,
         rankScore: Math.round(rankScore * 100) / 100,
-      };
-    });
+      });
+    }
     
     // Sort by rank score
     rankedRumors.sort((a, b) => b.rankScore - a.rankScore);

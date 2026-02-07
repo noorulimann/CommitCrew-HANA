@@ -138,6 +138,7 @@ export class StateCommitmentService {
               currentScore,
               committedScore,
               commitment: {
+                id: commitment._id?.toString() || commitment.id,
                 hourKey: commitment.hourKey,
                 rootHash: commitment.rootHash,
                 timestamp: commitment.timestamp,

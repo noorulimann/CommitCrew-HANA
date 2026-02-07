@@ -7,6 +7,8 @@ export interface IRumor extends Document {
   submitterNullifier: string;
   truthScore: number;
   totalVotes: number;
+  trueVotes: number;
+  falseVotes: number;
   status: 'active' | 'deleted' | 'archived';
   createdAt: Date;
   updatedAt: Date;
@@ -27,6 +29,14 @@ const RumorSchema = new Schema<IRumor>({
     default: 0.0,
   },
   totalVotes: {
+    type: Number,
+    default: 0,
+  },
+  trueVotes: {
+    type: Number,
+    default: 0,
+  },
+  falseVotes: {
     type: Number,
     default: 0,
   },
