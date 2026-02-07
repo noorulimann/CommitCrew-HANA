@@ -49,7 +49,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Step 1: Send OTP to email
+  // Step 1: Check if user is returning or new
   const handleEmailSubmit = async (email: string) => {
     setIsLoading(true);
     setError(null);
@@ -64,16 +64,29 @@ export default function LoginPage() {
       const data = await response.json();
       
       if (!data.success) {
-        setError(data.error || 'Failed to send verification code');
+        setError(data.error || 'Failed to process email');
         return;
       }
       
-      setState(prev => ({
-        ...prev,
-        step: 'otp',
-        email,
-        otpExpiresAt: new Date(data.data.expiresAt),
-      }));
+      // Check if returning user
+      if (data.data.isReturningUser) {
+        // Skip OTP for returning users, go directly to phrase input
+        setState(prev => ({
+          ...prev,
+          step: 'phrase-existing',
+          email,
+          isNewUser: false,
+        }));
+      } else {
+        // New user - proceed to OTP
+        setState(prev => ({
+          ...prev,
+          step: 'otp',
+          email,
+          otpExpiresAt: new Date(data.data.expiresAt),
+          isNewUser: true,
+        }));
+      }
       
     } catch {
       setError('Network error. Please try again.');
@@ -192,7 +205,8 @@ export default function LoginPage() {
       const data = await response.json();
       
       if (!data.success) {
-        setError('Invalid credentials. Check your email and secret phrase.');
+        // Provide specific error message for wrong secret phrase
+        setError('Incorrect secret phrase. Your identity does not match this email.');
         return;
       }
       
@@ -225,9 +239,11 @@ export default function LoginPage() {
   
   // Toggle between new and existing user
   const toggleUserType = () => {
+    // Go back to email step so the system can properly check if they're a returning user
     setState(prev => ({
       ...prev,
-      step: prev.step === 'phrase-new' ? 'phrase-existing' : 'phrase-new',
+      step: 'email' as AuthStep,
+      email: '', // Clear email for re-entry
     }));
     setError(null);
   };
@@ -238,8 +254,10 @@ export default function LoginPage() {
       switch (prev.step) {
         case 'otp':
           return { ...prev, step: 'email' as AuthStep };
-        case 'phrase-new':
         case 'phrase-existing':
+          // For returning users, go back to email (they skipped OTP)
+          return { ...prev, step: prev.isNewUser ? 'otp' : 'email' as AuthStep };
+        case 'phrase-new':
           return { ...prev, step: 'otp' as AuthStep };
         default:
           return prev;

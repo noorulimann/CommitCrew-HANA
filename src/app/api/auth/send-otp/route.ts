@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import connectDB from '@/lib/mongodb';
-import { createOTP } from '@/services/identity/otp';
+import { createOTP, isEmailVerified } from '@/services/identity/otp';
 import { sendOTPEmail } from '@/services/identity/email';
 import { validateEmail } from '@/utils/validation/email';
 import { errorResponse, successResponse } from '@/lib/api-helpers';
@@ -23,10 +23,26 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // 2. Database Action
+    // 2. Check if user is returning user
+    const isReturningUser = await isEmailVerified(email);
+    
+    // If returning user, don't send OTP
+    // They should use their secret phrase instead
+    if (isReturningUser) {
+      return successResponse(
+        {
+          message: 'User recognized. Please use your secret phrase to login.',
+          isReturningUser: true,
+          expiresAt: null,
+        },
+        'Returning user detected'
+      );
+    }
+    
+    // 3. For new users, create and send OTP
     const { otpCode, expiresAt } = await createOTP(email);
     
-    // 3. Email Action
+    // 4. Email Action
     const emailResult = await sendOTPEmail(email, otpCode, 5);
     
     if (!emailResult.success) {
@@ -47,6 +63,7 @@ export async function POST(request: NextRequest) {
       {
         message: 'Verification code sent to your email',
         expiresAt: expiresAt.toISOString(),
+        isReturningUser: false,
         ...(process.env.NODE_ENV === 'development' && { devOtp: otpCode }),
       },
       'OTP sent successfully'
